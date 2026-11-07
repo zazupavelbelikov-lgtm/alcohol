@@ -122,23 +122,19 @@
 const SUPABASE_URL = 'https://slffatuydefaeyubzbdy.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ogYcil-HDN-jaAn1mOmavA_HkZ6_vc8';
 
-let supabase;
-let currentUser = null, rooms = [], history = [], noteFilter = 'all', authMode = 'login';
+var supabaseClient;
+var currentUser = null, rooms = [], history = [], noteFilter = 'all', authMode = 'login';
 
 function emailFromLogin(login) { return login.toLowerCase().replace(/[^a-z0-9]/g, '') + '@alcohol.local'; }
 function authErr(msg) { document.getElementById('aErr').textContent = msg; }
 
 window.onload = async () => {
   try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    // Таймаут: если база не отвечает за 5 секунд, показываем ошибку
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Сервер не отвечает (таймаут 5 сек). Проверьте интернет или ключ.")), 5000));
-    const sessionReq = supabase.auth.getSession();
-    
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Сервер не отвечает (таймаут).")), 5000));
+    const sessionReq = supabaseClient.auth.getSession();
     const { data, error } = await Promise.race([sessionReq, timeout]);
     if (error) throw error;
-    
     if (data.session) { await loadProfile(data.session.user.id); }
     else { renderAuth(); }
   } catch (err) {
@@ -158,7 +154,7 @@ function setAuthMode(m) { authMode = m; renderAuth(); }
 
 async function doLogin() {
   const login = document.getElementById('aLogin').value.trim(), pass = document.getElementById('aPass').value;
-  const { data, error } = await supabase.auth.signInWithPassword({ email: emailFromLogin(login), password: pass });
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email: emailFromLogin(login), password: pass });
   if (error) { authErr("Неверный логин/пароль или ошибка базы"); return; }
   await loadProfile(data.user.id);
 }
@@ -171,19 +167,19 @@ async function doRegister() {
   if (pass.length < 6) { authErr("Пароль от 6 символов"); return; }
   if (pass !== pass2) { authErr("Пароли не совпадают"); return; }
   
-  const { error } = await supabase.auth.signUp({ email: emailFromLogin(login), password: pass, options: { data: { login, name } } });
+  const { error } = await supabaseClient.auth.signUp({ email: emailFromLogin(login), password: pass, options: { data: { login, name } } });
   if (error) { authErr(error.message); return; }
   alert("Аккаунт создан! Войдите."); setAuthMode('login');
 }
 
 async function loadProfile(userId) {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-  if (error || !data) { alert("Профиль не найден"); await supabase.auth.signOut(); return; }
+  const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', userId).single();
+  if (error || !data) { alert("Профиль не найден"); await supabaseClient.auth.signOut(); return; }
   currentUser = data; startApp();
 }
 
 async function logout() {
-  await supabase.auth.signOut(); currentUser = null; rooms = []; history = [];
+  await supabaseClient.auth.signOut(); currentUser = null; rooms = []; history = [];
   document.getElementById('app').style.display = 'none';
   document.getElementById('authScreen').style.display = 'flex';
   setAuthMode('login');
@@ -198,8 +194,8 @@ async function startApp() {
 }
 
 async function refreshData() {
-  const { data: r } = await supabase.from('rooms').select('*').order('number');
-  const { data: h } = await supabase.from('history').select('*').order('created_at', { ascending: false }).limit(100);
+  const { data: r } = await supabaseClient.from('rooms').select('*').order('number');
+  const { data: h } = await supabaseClient.from('history').select('*').order('created_at', { ascending: false }).limit(100);
   rooms = r || []; history = h || []; renderAll();
 }
 
@@ -263,8 +259,8 @@ async function addItem(roomId) {
   if (!name || qty <= 0) return alert('Заполните поля');
   const room = rooms.find(r => r.id === roomId), items = [...(room.items || [])], ex = items.find(i => i.name.toLowerCase() === name.toLowerCase());
   if (ex) ex.qty += qty; else items.push({ name, qty });
-  await supabase.from('rooms').update({ items }).eq('id', roomId);
-  await supabase.from('history').insert({ type: 'arrival', room: room.number, item: name, qty, by_login: currentUser.login, by_name: currentUser.name });
+  await supabaseClient.from('rooms').update({ items }).eq('id', roomId);
+  await supabaseClient.from('history').insert({ type: 'arrival', room: room.number, item: name, qty, by_login: currentUser.login, by_name: currentUser.name });
   closeModal(); await refreshData();
 }
 
@@ -273,8 +269,8 @@ async function drink(roomId, itemIdx) {
   if (!item || item.qty <= 0) return;
   if (!confirm(`Списать «${item.name}»?`)) return;
   item.qty -= 1; const newItems = item.qty === 0 ? items.filter((_, i) => i !== itemIdx) : items;
-  await supabase.from('rooms').update({ items: newItems }).eq('id', roomId);
-  await supabase.from('history').insert({ type: 'writeoff', room: room.number, item: item.name, qty: 1, by_login: currentUser.login, by_name: currentUser.name });
+  await supabaseClient.from('rooms').update({ items: newItems }).eq('id', roomId);
+  await supabaseClient.from('history').insert({ type: 'writeoff', room: room.number, item: item.name, qty: 1, by_login: currentUser.login, by_name: currentUser.name });
   await refreshData();
 }
 
@@ -282,9 +278,9 @@ function openAddRoom() { openModal(`<h3>Новый номер</h3><label class="
 async function addRoom() {
   const num = document.getElementById('mNum').value.trim(), guest = document.getElementById('mGuest').value.trim();
   if (!num) return alert('Введите номер');
-  await supabase.from('rooms').insert({ number: num, guest, items: [] }); closeModal(); await refreshData();
+  await supabaseClient.from('rooms').insert({ number: num, guest, items: [] }); closeModal(); await refreshData();
 }
-async function delRoom(id) { if (!confirm('Удалить?')) return; await supabase.from('rooms').delete().eq('id', id); await refreshData(); }
+async function delRoom(id) { if (!confirm('Удалить?')) return; await supabaseClient.from('rooms').delete().eq('id', id); await refreshData(); }
 </script>
 </body>
 </html>
