@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f1117">
+<title>Учёт алкоголя</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2f3d; --text: #f1f5f9;
+    --muted: #94a3b8; --emerald: #10b981; --red: #ef4444; --amber: #f59e0b; --blue: #3b82f6;
+    --radius: 16px; --shadow: 0 4px 20px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; padding:0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 78px; min-height: 100vh; }
+  input, select, button { font-size: 16px; font-family: inherit; }
+  #authScreen { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; background: radial-gradient(circle at 20% 10%, rgba(16,185,129,.12), transparent 45%), radial-gradient(circle at 80% 90%, rgba(59,130,246,.10), transparent 45%), var(--bg); }
+  .auth-wrap { width: 100%; max-width: 360px; animation: fadeUp .5s ease; }
+  .auth-logo { text-align:center; font-size: 46px; margin-bottom: 6px; }
+  .auth-title { text-align:center; font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+  .auth-sub { text-align:center; color: var(--muted); font-size: 13px; margin: 0 0 22px; }
+  .card { background: var(--card); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); animation: fadeUp .35s ease; }
+  .field-label { display:block; font-size: 12px; color: var(--muted); margin: 10px 0 6px; }
+  .input { width: 100%; padding: 13px 14px; border-radius: 12px; border: 1px solid var(--border); background: #12151e; color: var(--text); outline: none; transition: border-color .2s, box-shadow .2s; }
+  .input:focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(16,185,129,.15); }
+  .input::placeholder { color: #5b6478; }
+  button { flex: 1; padding: 13px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: transform .08s ease, filter .2s; }
+  button:active { transform: scale(.97); }
+  .btn-primary { background: var(--emerald); color: #04140d; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-ghost { background: #262b38; color: var(--text); }
+  .btn-full { width: 100%; }
+  .mt-10 { margin-top: 10px; }
+  .hint { font-size: 12px; color: #6b7280; padding: 8px 0 0; line-height: 1.5; }
+  .hint a { color: var(--emerald); text-decoration: none; }
+  .err { color: #f87171; font-size: 12.5px; margin-top: 8px; min-height: 16px; }
+  header { position: sticky; top: 0; z-index: 10; background: rgba(15,17,23,.92); backdrop-filter: blur(12px); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 16px; margin: 0; font-weight: 700; }
+  .badge { font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 20px; background: #262b38; color: var(--muted); }
+  .badge.admin { background: var(--emerald); color: #04140d; }
+  .container { padding: 14px; }
+  .search { width: 100%; padding: 13px 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); color: var(--text); margin-bottom: 14px; outline: none; }
+  .search:focus { border-color: var(--emerald); }
+  .room-card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); box-shadow: var(--shadow); animation: fadeUp .3s ease; }
+  .room-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .room-title { font-weight: 700; font-size: 16px; }
+  .stock-badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: rgba(16,185,129,.15); color: var(--emerald); }
+  .stock-badge.
+
+
+low { background: rgba(245,158,11,.15); color: var(--amber); }
+  .stock-badge.zero { background: rgba(239,68,68,.15); color: var(--red); }
+  .item-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-top: 1px solid var(--border); font-size: 14px; }
+  .item-row:first-of-type { border-top: none; }
+  .item-name { color: var(--text); }
+  .item-controls { display: flex; align-items: center; gap: 8px; }
+  .qty-pill { min-width: 28px; text-align: center; background: #12151e; border-radius: 8px; padding: 4px 8px; font-weight: 700; font-size: 13px; }
+  .btn-minus { flex: none; width: 34px; height: 34px; padding: 0; border-radius: 10px; background: rgba(239,68,68,.15); color: var(--red); font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .btn-minus:hover { background: rgba(239,68,68,.28); }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .filters { display: flex; gap: 8px; margin-bottom: 12px; }
+  .filters button { flex: 1; padding: 9px; font-size: 13px; font-weight: 600; background: var(--card); color: var(--muted); border: 1px solid var(--border); border-radius: 10px; }
+  .filters button.active { background: var(--emerald); color: #04140d; border-color: var(--emerald); }
+  .note { font-size: 13.5px; padding: 12px 14px; background: var(--card); margin-bottom: 9px; border-radius: 12px; border-left: 3px solid var(--red); animation: fadeUp .25s ease; }
+  .note.arrival { border-left-color: var(--blue); }
+  .note .who { margin-bottom: 3px; }
+  .note .time { color: #6b7280; font-size: 11.5px; margin-top: 5px; }
+  .note .edited { color: var(--amber); font-size: 11.5px; }
+  .activity-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-top: 1px solid var(--border); font-size: 13.5px; }
+  .activity-row:first-of-type { border-top: none; }
+  .activity-stats { font-size: 12px; color: var(--muted); }
+  .empty { text-align: center; color: #555e70; padding: 44px 20px; font-size: 14px; }
+  .loading { text-align: center; padding: 44px; color: var(--muted); }
+  .tabs { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; display: flex; background: rgba(15,17,23,.96); backdrop-filter: blur(12px); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
+  .tab { flex: 1; padding: 10px 2px 8px; text-align: center; font-size: 10.5px; color: #6b7280; cursor: pointer; transition: color .2s; }
+  .tab.active { color: var(--emerald); }
+  .tab .icon { font-size: 20px; display: block; margin-bottom: 3px; }
+  .modal-bg { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.72); align-items: center; justify-content: center; padding: 16px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--card); border-radius: 18px; padding: 20px; width: 100%; max-width: 400px; max-height: 86vh; overflow-y: auto; animation: fadeUp .25s ease; }
+  .modal h3 { margin: 0 0 14px; font-size: 17px; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 18px; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .view { display: none; }
+  .view.active { display: block; }
+  .block-title { font-size: 14px; color: var(--emerald); margin: 20px 0 10px 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+</style>
+</head>
+<body>
+
+<div id="authScreen">
+  <div class="auth-wrap">
+    <div class="auth-logo">🍾</div>
+    <h1 class="auth-title">Учёт алкоголя</h1>
+    <p class="auth-sub">Команда 5 человек · #1 — админ</p>
+    <div id="authForm"><div class="loading">Загрузка...</div></div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <h1>🍾 Учёт алкоголя</h1>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="roleBadge" class="badge">—</span>
+      <button style="flex:none;padding:7px 11px;font-size:12px;" class="btn-ghost" onclick="logout()">Выйти</button>
+    </div>
+  </header>
+
+  <div id="view-rooms" class="view active">
+
+
+<div class="container">
+      <input class="search" id="searchRooms" placeholder="🔍 Поиск по номеру или гостю..." oninput="renderRooms()">
+      <div id="roomsList"><div class="loading">Загрузка...</div></div>
+    </div>
+  </div>
+
+  <div id="view-notes" class="view">
+    <div class="container">
+      <div class="filters">
+        <button class="active" onclick="setFilter('all', this)">Все</button>
+        <button onclick="setFilter('arrival', this)">Приход</button>
+        <button onclick="setFilter('writeoff', this)">Списание</button>
+      </div>
+      <div id="notesList"><div class="loading">Загрузка...</div></div>
+    </div>
+  </div>
+
+  <div id="view-admin" class="view">
+    <div class="container" id="adminPanel"></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('rooms', this)"><span class="icon">🏨</span>Номера</div>
+    <div class="tab" onclick="switchTab('notes', this)"><span class="icon">📝</span>История</div>
+    <div class="tab" onclick="switchTab('admin', this)"><span class="icon">⚙️</span>Админ</div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalContent"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ================== ТВОИ КЛЮЧИ SUPABASE ================== */
+const SUPABASE_URL = 'https://slffatuydefaeyubzbdy.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ogYcil-HDN-jaAn1mOmavA_HkZ6_vc8';
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let rooms = [];
+let history = [];
+let noteFilter = 'all';
+let authMode = 'login';
+
+function emailFromLogin(login) { return login.toLowerCase().replace(/[^a-z0-9]/g, '') + '@alcohol.local'; }
+function authErr(msg) { const el = document.getElementById('aErr'); if (el) el.textContent = msg; }
+
+function renderAuth() {
+  const box = document.getElementById('authForm');
+  if (authMode === 'login') {
+    box.innerHTML = `
+      <div class="card">
+        <label class="field-label">Логин</label>
+        <input class="input" id="aLogin" placeholder="2–5 символов" autocomplete="username">
+        <label class="field-label">Пароль</label>
+        <input class="input" id="aPass" type="password" placeholder="Пароль" autocomplete="current-password">
+        <div id="aErr" class="err"></div>
+        <button class="btn-primary btn-full mt-10" onclick="doLogin()">Войти</button>
+        <div class="hint" style="text-align:center;">Нет аккаунта? <a href="#" onclick="setAuthMode('register');return false;">Зарегистрироваться</a></div>
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <div class="card">
+        <label class="field-label">Логин (2–5 символов)</label>
+        <input class="input" id="aLogin" placeholder="напр. #2 или Аня" maxlength="5">
+        <label class="field-label">Ваше имя (видно админу)</label>
+        <input class="input" id="aName" placeholder="Например: Толя" maxlength="20">
+        <label class="field-label">Пароль (от 6 символов)</label>
+        <input class="input" id="aPass" type="password" placeholder="Пароль">
+        <label class="field-label">Повторите пароль</label>
+        <input class="input" id="aPass2" type="password" placeholder="Ещё раз">
+        <div id="aErr" class="err"></div>
+        <button class="btn-primary btn-full mt-10" onclick="doRegister()">Создать аккаунт</button>
+        <div class="hint" style="text-align:center;">Уже есть? <a href="#" onclick="setAuthMode('login');return false;">Войти</a></div>
+        <div class="hint">⚠️ Логин «#1» зарезервирован. Пароль от 6 символов.</div>
+      </div>`;
+  }
+}
+function setAuthMode(m) { authMode = m; renderAuth(); }
+
+function validateLogin(login) {
+  if (login.length < 2 || login.length > 5) return "Логин должен быть 2–5 символов";
+  if (!/^[#a-zA-Zа-яА-Я0-9]+$/.test(login)) return "Только буквы, цифры и #";
+  return null;
+}
+
+async function doLogin() {
+  const login = document.getElementById('aLogin').value.trim();
+  const pass = document.getElementById('aPass').value;
+
+
+const { data, error } = await supabase.auth.signInWithPassword({
+    email: emailFromLogin(login), password: pass
+  });
+  if (error) { authErr("Неверный логин или пароль"); return; }
+  await loadProfile(data.user.id);
+}
+
+async function doRegister() {
+  const login = document.getElementById('aLogin').value.trim();
+  const name = document.getElementById('aName').value.trim();
+  const pass = document.getElementById('aPass').value;
+  const pass2 = document.getElementById('aPass2').value;
+
+  const err = validateLogin(login);
+  if (err) { authErr(err); return; }
+  if (login === "#1") { authErr("Логин «#1» зарезервирован"); return; }
+  if (name.length < 2) { authErr("Укажите имя"); return; }
+  if (pass.length < 6) { authErr("Пароль от 6 символов"); return; }
+  if (pass !== pass2) { authErr("Пароли не совпадают"); return; }
+
+  const { error } = await supabase.auth.signUp({
+    email: emailFromLogin(login),
+    password: pass,
+    options: { data: { login, name } }
+  });
+  if (error) { authErr(error.message); return; }
+  alert("Аккаунт создан! Войдите.");
+  setAuthMode('login');
+}
+
+async function loadProfile(userId) {
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+  if (error || !data) { alert("Профиль не найден"); await supabase.auth.signOut(); return; }
+  currentUser = data;
+  startApp();
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+  currentUser = null; rooms = []; history = [];
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  setAuthMode('login');
+}
+
+async function startApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('roleBadge').textContent = currentUser.role === 'admin' ? 'Админ' : currentUser.login;
+  document.getElementById('roleBadge').className = 'badge' + (currentUser.role === 'admin' ? ' admin' : '');
+  await refreshData();
+}
+
+async function refreshData() {
+  const { data: r } = await supabase.from('rooms').select('*').order('number');
+  const { data: h } = await supabase.from('history').select('*').order('created_at', { ascending: false }).limit(100);
+  rooms = r  []; history = h  [];
+  renderAll();
+}
+
+function renderAll() { renderRooms(); renderNotes(); renderAdmin(); }
+
+function renderRooms() {
+  const q = (document.getElementById('searchRooms').value || '').toLowerCase().trim();
+  const list = document.getElementById('roomsList');
+  const filtered = rooms.filter(r =>
+    r.number.toLowerCase().includes(q)  (r.guest  '').toLowerCase().includes(q));
+  if (!filtered.length) { list.innerHTML = '<div class="empty">Номеров не найдено</div>'; return; }
+
+  const blocks = [
+    { name: '3 этаж', prefix: '3' },
+    { name: '2 этаж', prefix: '2' },
+    { name: 'Цоколь', prefix: '1' }
+  ];
+  let html = '';
+  blocks.forEach(block => {
+    const blockRooms = filtered.filter(r => r.number.startsWith(block.prefix));
+    if (!blockRooms.length) return;
+    html += <h2 class="block-title">${block.name}</h2>;
+    html += blockRooms.map(r => {
+      const total = (r.items || []).reduce((s, i) => s + i.qty, 0);
+      const cls = total === 0 ? 'zero' : total <= 1 ? 'low' : '';
+      const itemsHtml = (r.items || []).length
+        ? r.items.map((it, idx) => `
+            <div class="item-row">
+              <span class="item-name">${it.name}</span>
+              <div class="item-controls">
+                <span class="qty-pill">${it.qty}</span>
+                <button class="btn-minus" onclick="drink(${r.id}, ${idx})">−</button>
+              </div>
+            </div>`).join('')
+        : '<div class="hint" style="padding-top:4px;padding-bottom:2px;">Нет алкоголя</div>';
+      return `
+        <div class="room-card">
+          <div class="room-head">
+            <span class="room-title">🚪 ${r.number}${r.guest ? ' · ' + r.guest : ''}</span>
+            <span class="stock-badge ${cls}">${total} шт.</span>
+          </div>
+          ${itemsHtml}
+
+
+<div class="actions"><button class="btn-primary" onclick="openAdd(${r.id})">➕ Загрузить</button></div>
+        </div>`;
+    }).join('');
+  });
+  list.innerHTML = html;
+}
+
+function setFilter(f, el) {
+  noteFilter = f;
+  document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderNotes();
+}
+
+function renderNotes() {
+  const list = document.getElementById('notesList');
+  let items = history;
+  if (noteFilter !== 'all') items = items.filter(n => n.type === noteFilter);
+  if (!items.length) { list.innerHTML = '<div class="empty">Записей нет</div>'; return; }
+  list.innerHTML = items.map(n => {
+    const isArrival = n.type === 'arrival';
+    const who = ${n.by_login}${n.by_name ? ' (' + n.by_name + ')' : ''};
+    const verb = isArrival ? 'добавил в' : 'списал из';
+    const icon = isArrival ? '📥' : '📤';
+    const time = new Date(n.created_at).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    return `
+      <div class="note ${isArrival ? 'arrival' : ''}">
+        <div class="who">${icon} <b>${who}</b> ${verb} <b>#${n.room}</b></div>
+        <div>«${n.item}» — ${n.qty} шт.</div>
+        <div class="time">${time}${n.edited ? ' · <span class="edited">✏️ исправлено</span>' : ''}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderAdmin() {
+  const panel = document.getElementById('adminPanel');
+  if (currentUser.role !== 'admin') { panel.innerHTML = '<div class="empty">Раздел доступен только администратору (#1)</div>'; return; }
+  const byUser = {};
+  history.forEach(n => {
+    const key = ${n.by_login} (${n.by_name});
+    if (!byUser[key]) byUser[key] = { arrivals: 0, writeoffs: 0 };
+    if (n.type === 'arrival') byUser[key].arrivals += n.qty;
+    else byUser[key].writeoffs += n.qty;
+  });
+  const activity = Object.entries(byUser).map(([who, s]) => `
+    <div class="activity-row"><span>${who}</span><span class="activity-stats">📥 ${s.arrivals} · 📤 ${s.writeoffs}</span></div>
+  `).join('') || '<div class="hint">Операций пока не было</div>';
+
+  panel.innerHTML = `
+    <div class="card">
+      <b>Кто что делал</b>
+      <div class="hint">Приход / списание (шт.)</div>
+      ${activity}
+    </div>
+    <div class="card">
+      <b>Номерной фонд (${rooms.length})</b>
+      <button class="btn-primary btn-full mt-10" onclick="openAddRoom()">➕ Добавить номер</button>
+      <div style="margin-top:10px;">
+      ${rooms.map(r => `
+        <div class="item-row">
+          <span>🚪 ${r.number}${r.guest?' · '+r.guest:''}</span>
+          <button class="btn-danger" style="flex:none;padding:6px 12px;font-size:12px;border-radius:8px;" onclick="delRoom(${r.id})">Удалить</button>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <b>Отчётность</b>
+      <button class="btn-ghost btn-full mt-10" onclick="exportCSV()">📤 Экспорт истории (CSV)</button>
+    </div>`;
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+function openModal(html) { document.getElementById('modalContent').innerHTML = html; document.getElementById('modalBg').classList.add('show'); }
+function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
+document.getElementById('modalBg').addEventListener('click', e => { if (e.target.id === 'modalBg') closeModal(); });
+
+function openAdd(roomId) {
+  openModal(`
+    <h3>Загрузить алкоголь</h3>
+    <label class="field-label">Напиток</label>
+    <input class="input" id="mItem" placeholder="Например: Вино красное">
+    <label class="field-label">Количество</label>
+    <input class="input" id="mQty" type="number" value="1" min="1">
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn-primary" onclick="addItem(${roomId})">Загрузить</button>
+    </div>`);
+}
+
+
+async function addItem(roomId) {
+  const name = document.getElementById('mItem').value.trim();
+  const qty = parseInt(document.getElementById('mQty').value) || 0;
+  if (!name || qty <= 0) { alert('Укажите напиток и количество'); return; }
+  const room = rooms.find(r => r.id === roomId);
+  const items = [...(room.items || [])];
+  const ex = items.find(i => i.name.toLowerCase() === name.toLowerCase());
+  if (ex) ex.qty += qty; else items.push({ name, qty });
+  await supabase.from('rooms').update({ items }).eq('id', roomId);
+  await supabase.from('history').insert({ type: 'arrival', room: room.number, item: name, qty, by_login: currentUser.login, by_name: currentUser.name });
+  closeModal();
+  await refreshData();
+}
+
+async function drink(roomId, itemIdx) {
+  const room = rooms.find(r => r.id === roomId);
+  const items = [...(room.items || [])];
+  const item = items[itemIdx];
+  if (!item || item.qty <= 0) return;
+  if (!confirm(`Списать 1 шт. «${item.name}» из номера ${room.number}?`)) return;
+  item.qty -= 1;
+  const newItems = item.qty === 0 ? items.filter((_, i) => i !== itemIdx) : items;
+  await supabase.from('rooms').update({ items: newItems }).eq('id', roomId);
+  await supabase.from('history').insert({ type: 'writeoff', room: room.number, item: item.name, qty: 1, by_login: currentUser.login, by_name: currentUser.name });
+  await refreshData();
+}
+
+function openAddRoom() {
+  openModal(`
+    <h3>Новый номер</h3>
+    <label class="field-label">Номер</label>
+    <input class="input" id="mNum" placeholder="305">
+    <label class="field-label">Гость (необязательно)</label>
+    <input class="input" id="mGuest" placeholder="Фамилия">
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn-primary" onclick="addRoom()">Добавить</button>
+    </div>`);
+}
+
+async function addRoom() {
+  const num = document.getElementById('mNum').value.trim();
+  const guest = document.getElementById('mGuest').value.trim();
+  if (!num) { alert('Укажите номер'); return; }
+  const { error } = await supabase.from('rooms').insert({ number: num, guest, items: [] });
+  if (error) { alert(error.message); return; }
+  closeModal();
+  await refreshData();
+}
+
+async function delRoom(id) {
+  if (!confirm('Удалить номер вместе с алкоголем?')) return;
+  await supabase.from('rooms').delete().eq('id', id);
+  await refreshData();
+}
+
+function exportCSV() {
+  const rows = [['Дата','Тип','Номер','Напиток','Кол-во','Логин','Имя','Исправлено']];
+  history.forEach(n => rows.push([new Date(n.created_at).toLocaleString('ru-RU'), n.type === 'arrival' ? 'Приход' : 'Списание', n.room, n.item, n.qty, n.by_login, n.by_name || '', n.edited ? 'да' : '']));
+  const csv = rows.map(r => r.join(';')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'otchet_alkogol.csv'; a.click();
+}
+
+(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) { await loadProfile(session.user.id); }
+  else { renderAuth(); }
+})();
+</script>
+</body>
+</html>
