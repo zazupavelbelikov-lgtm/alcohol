@@ -293,6 +293,19 @@ async function addRoom() {
   await supabase.from('rooms').insert({ number: num, guest, items: [] }); closeModal(); await refreshData();
 }
 async function delRoom(id) { if (!confirm('Удалить?')) return; await supabase.from('rooms').delete().eq('id', id); await refreshData(); }
+// --- БЛОК ПРОВЕРКИ СВЯЗИ ---
+console.log("Проверка запущена");
+fetch(SUPABASE_URL + '/auth/v1/health', {
+  headers: { 'apikey': SUPABASE_ANON_KEY }
+}).then(res => res.json()).then(data => {
+  console.log("Ответ от базы:", data);
+  if (data.error || data.message) {
+     document.getElementById('authForm').innerHTML = '<div style="color:red; font-size:14px; padding:20px;">БАЗА ОТВЕТИЛА ОШИБКОЙ:<br>' + JSON.stringify(data) + '</div>';
+  }
+}).catch(err => {
+  document.getElementById('authForm').innerHTML = '<div style="color:red; font-size:14px; padding:20px;">ОШИБКА СЕТИ:<br>' + err.message + '</div>';
+});
+// ---------------------------
 </script>
 </body>
 </html>
