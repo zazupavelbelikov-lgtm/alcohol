@@ -125,7 +125,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 var supabaseClient;
 var currentUser = null, rooms = [], history = [], noteFilter = 'all', authMode = 'login';
 
-function emailFromLogin(login) { return login.toLowerCase().replace(/[^a-z0-9]/g, '') + '@alcohol.local'; }
+function emailFromLogin(login) { return login.toLowerCase().replace(/[^a-z0-9]/g, '') + '@gmail.com'; }
 function authErr(msg) { document.getElementById('aErr').textContent = msg; }
 
 window.onload = async () => {
