@@ -47,10 +47,7 @@
   .room-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .room-title { font-weight: 700; font-size: 16px; }
   .stock-badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: rgba(16,185,129,.15); color: var(--emerald); }
-  .stock-badge.
-
-
-low { background: rgba(245,158,11,.15); color: var(--amber); }
+  .stock-badge.low { background: rgba(245,158,11,.15); color: var(--amber); }
   .stock-badge.zero { background: rgba(239,68,68,.15); color: var(--red); }
   .item-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-top: 1px solid var(--border); font-size: 14px; }
   .item-row:first-of-type { border-top: none; }
@@ -109,9 +106,7 @@ low { background: rgba(245,158,11,.15); color: var(--amber); }
   </header>
 
   <div id="view-rooms" class="view active">
-
-
-<div class="container">
+    <div class="container">
       <input class="search" id="searchRooms" placeholder="🔍 Поиск по номеру или гостю..." oninput="renderRooms()">
       <div id="roomsList"><div class="loading">Загрузка...</div></div>
     </div>
@@ -143,12 +138,11 @@ low { background: rgba(245,158,11,.15); color: var(--amber); }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ================== ТВОИ КЛЮЧИ SUPABASE ================== */
+/* ТВОИ КЛЮЧИ SUPABASE */
 const SUPABASE_URL = 'https://slffatuydefaeyubzbdy.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ogYcil-HDN-jaAn1mOmavA_HkZ6_vc8';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+let supabase;
 let currentUser = null;
 let rooms = [];
 let history = [];
@@ -157,6 +151,26 @@ let authMode = 'login';
 
 function emailFromLogin(login) { return login.toLowerCase().replace(/[^a-z0-9]/g, '') + '@alcohol.local'; }
 function authErr(msg) { const el = document.getElementById('aErr'); if (el) el.textContent = msg; }
+
+// Безопасный запуск с показом ошибки на экране
+window.onload = async () => {
+  try {
+    if (!window.supabase) throw new Error("Нет доступа к интернету или CDN заблокирован");
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+
+    if (data.session) { await loadProfile(data.session.user.id); }
+    else { renderAuth(); }
+  } catch (err) {
+    document.getElementById('authForm').innerHTML = `
+      <div style="color: #ef4444; text-align: center; font-size: 14px; padding: 20px; background: rgba(239,68,68,.1); border-radius: 12px; border: 1px solid #ef4444;">
+        <b>Ошибка подключения:</b><br><br>${err.message}<br><br>
+        <span style="font-size: 12px; color: #aaa;">Проверь ключи в файле index.html или интернет.</span>
+      </div>`;
+  }
+};
 
 function renderAuth() {
   const box = document.getElementById('authForm');
@@ -200,9 +214,7 @@ function validateLogin(login) {
 async function doLogin() {
   const login = document.getElementById('aLogin').value.trim();
   const pass = document.getElementById('aPass').value;
-
-
-const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: emailFromLogin(login), password: pass
   });
   if (error) { authErr("Неверный логин или пароль"); return; }
@@ -258,7 +270,7 @@ async function startApp() {
 async function refreshData() {
   const { data: r } = await supabase.from('rooms').select('*').order('number');
   const { data: h } = await supabase.from('history').select('*').order('created_at', { ascending: false }).limit(100);
-  rooms = r  []; history = h  [];
+  rooms = r || []; history = h || [];
   renderAll();
 }
 
@@ -268,7 +280,7 @@ function renderRooms() {
   const q = (document.getElementById('searchRooms').value || '').toLowerCase().trim();
   const list = document.getElementById('roomsList');
   const filtered = rooms.filter(r =>
-    r.number.toLowerCase().includes(q)  (r.guest  '').toLowerCase().includes(q));
+    r.number.toLowerCase().includes(q) || (r.guest || '').toLowerCase().includes(q));
   if (!filtered.length) { list.innerHTML = '<div class="empty">Номеров не найдено</div>'; return; }
 
   const blocks = [
@@ -280,7 +292,7 @@ function renderRooms() {
   blocks.forEach(block => {
     const blockRooms = filtered.filter(r => r.number.startsWith(block.prefix));
     if (!blockRooms.length) return;
-    html += <h2 class="block-title">${block.name}</h2>;
+    html += `<h2 class="block-title">${block.name}</h2>`;
     html += blockRooms.map(r => {
       const total = (r.items || []).reduce((s, i) => s + i.qty, 0);
       const cls = total === 0 ? 'zero' : total <= 1 ? 'low' : '';
@@ -301,9 +313,7 @@ function renderRooms() {
             <span class="stock-badge ${cls}">${total} шт.</span>
           </div>
           ${itemsHtml}
-
-
-<div class="actions"><button class="btn-primary" onclick="openAdd(${r.id})">➕ Загрузить</button></div>
+          <div class="actions"><button class="btn-primary" onclick="openAdd(${r.id})">➕ Загрузить</button></div>
         </div>`;
     }).join('');
   });
@@ -324,7 +334,7 @@ function renderNotes() {
   if (!items.length) { list.innerHTML = '<div class="empty">Записей нет</div>'; return; }
   list.innerHTML = items.map(n => {
     const isArrival = n.type === 'arrival';
-    const who = ${n.by_login}${n.by_name ? ' (' + n.by_name + ')' : ''};
+    const who = `${n.by_login}${n.by_name ? ' (' + n.by_name + ')' : ''}`;
     const verb = isArrival ? 'добавил в' : 'списал из';
     const icon = isArrival ? '📥' : '📤';
     const time = new Date(n.created_at).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
@@ -342,7 +352,7 @@ function renderAdmin() {
   if (currentUser.role !== 'admin') { panel.innerHTML = '<div class="empty">Раздел доступен только администратору (#1)</div>'; return; }
   const byUser = {};
   history.forEach(n => {
-    const key = ${n.by_login} (${n.by_name});
+    const key = `${n.by_login} (${n.by_name})`;
     if (!byUser[key]) byUser[key] = { arrivals: 0, writeoffs: 0 };
     if (n.type === 'arrival') byUser[key].arrivals += n.qty;
     else byUser[key].writeoffs += n.qty;
@@ -396,7 +406,6 @@ function openAdd(roomId) {
       <button class="btn-primary" onclick="addItem(${roomId})">Загрузить</button>
     </div>`);
 }
-
 
 async function addItem(roomId) {
   const name = document.getElementById('mItem').value.trim();
@@ -461,12 +470,6 @@ function exportCSV() {
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'otchet_alkogol.csv'; a.click();
 }
-
-(async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) { await loadProfile(session.user.id); }
-  else { renderAuth(); }
-})();
 </script>
 </body>
 </html>
