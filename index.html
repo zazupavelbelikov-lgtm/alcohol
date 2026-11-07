@@ -473,3 +473,8 @@ function exportCSV() {
 </script>
 </body>
 </html>
+<script>
+window.addEventListener('error', function(e) {
+  document.body.innerHTML = '<div style="color:red; padding:20px; font-family:sans-serif; background:white;"><h2>Ошибка в коде:</h2><p>' + e.message + '</p></div>';
+});
+</script>
