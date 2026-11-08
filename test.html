@@ -1,1 +1,30 @@
-404: Not Found
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Тест</title></head>
+<body style="background:#111; color:#fff; font-family:sans-serif; padding:20px;">
+  <h2>Проверка базы данных</h2>
+  <div id="result" style="font-size:16px; padding:10px; border:1px solid #444;">Загрузка...</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const url = 'https://slffatuydefaeyubzbdy.supabase.co';
+    const key = 'sb_publishable_ogYcil-HDN-jaAn1mOmavA_HkZ6_vc8';
+
+    const supabase = window.supabase.createClient(url, key);
+
+    // Пытаемся записать тестовую строку в историю
+    supabase.from('history').insert([{ 
+      type: 'arrival', room: 'TEST', item: 'TEST', qty: 1, by_login: 'TEST', by_name: 'TEST' 
+    }]).then(({ data, error }) => {
+      const res = document.getElementById('result');
+      if (error) {
+        res.style.background = '#f00';
+        res.innerHTML = 'ОШИБКА ЗАПИСИ: <br><br>' + error.message;
+      } else {
+        res.style.background = '#080';
+        res.innerHTML = 'УСПЕХ! База данных разрешила записать тестовую строку.<br>Значит, код на GitHub работает неправильно.';
+      }
+    });
+  </script>
+</body>
+</html>
